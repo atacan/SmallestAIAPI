@@ -27,7 +27,7 @@ RESET  := $(ESC)[0m
 # Meta Targets
 # ------------------------------------------------------------------------------
 
-.PHONY: all help check-clean merge-main format test-on-linux regenerate generate build test
+.PHONY: all help check-clean merge-main format install-hooks test-on-linux regenerate generate build test
 
 # Default target runs help
 all: help
@@ -64,6 +64,12 @@ merge-main: check-clean ## Merge current branch into main and push
 # ------------------------------------------------------------------------------
 # Code Quality
 # ------------------------------------------------------------------------------
+
+install-hooks: ## Install secret-scanning pre-commit hooks (requires pre-commit, Go, and TruffleHog)
+	@command -v pre-commit > /dev/null || (echo "$(RED)pre-commit not found. See README.md for setup.$(RESET)" && exit 1)
+	@command -v go > /dev/null || (echo "$(RED)Go not found. See README.md for setup.$(RESET)" && exit 1)
+	@command -v trufflehog > /dev/null || (echo "$(RED)TruffleHog not found. See README.md for setup.$(RESET)" && exit 1)
+	pre-commit install --install-hooks
 
 format: check-clean ## Run swift-format on Sources and Tests
 	@echo "$(YELLOW)Formatting Swift files...$(RESET)"

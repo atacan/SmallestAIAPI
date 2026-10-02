@@ -18,6 +18,38 @@ Keep `original_openapi.json` as the source specification. Add manual schema fixe
 to `openapi-overlay.json`, then run `make regenerate`. Generated files under
 `Sources/*/GeneratedSources` and `openapi.json` are replaced during regeneration.
 
+## Secret scanning
+
+Following the [secret-scanning guide](https://actondon.com/blog/secret-scanning-for-git-repo),
+commits are checked with Betterleaks for secret patterns and TruffleHog for active
+credentials or credentials whose verification fails. Install the prerequisites
+and activate the hooks in each clone:
+
+```sh
+brew install pre-commit go trufflehog
+make install-hooks
+```
+
+pre-commit builds the pinned Betterleaks release using Go. TruffleHog uses the
+installed executable (CI pins version 3.97.9). Betterleaks checks the staged diff;
+TruffleHog checks staged files while pre-commit temporarily stashes unstaged
+edits. Missing scanners and scan errors block the commit. TruffleHog contacts
+credential providers for verification, so it requires network access.
+
+Run the hooks manually on staged changes with `pre-commit run`. GitHub Actions
+runs both scanners on pull requests targeting `main`, pushes to `main`, and
+manual dispatches. Betterleaks scans all fetched refs; TruffleHog scans the full
+history reachable from the checked-out commit. Findings in old commits also
+fail CI, even if the secret was later removed. Scan output omits secret values.
+
+Review false positives individually. Betterleaks supports fingerprints in
+`.betterleaksignore` or a `betterleaks:allow` comment on the affected line;
+TruffleHog supports `trufflehog:ignore` on the affected line. Keep exclusions
+narrow and explain why the value is safe. Revoke and rotate any real leaked
+credential before removing it; deleting it from the current file does not
+remove it from Git history. Keep real credentials in the ignored `.env` file
+or environment variables.
+
 ## Live transcription example
 
 Set `API_KEY` in your environment or add `API_KEY=your_actual_key` to a `.env`
