@@ -45,7 +45,7 @@ struct SmallestAIAPITests {
             middlewares: [AuthenticationMiddleware(apiKey: "Bearer \(apiKey)")]
         )
         let input = Operations.speechToText_transcribe.Input(
-            query: .init(model: .pulse_hyphen_pro, language: .en),
+            query: .init(model: .pulse_hyphen_pro, language: .en, word_timestamps: ._true),
             body: .binary(body)
         )
         let response = try await client.speechToText_transcribe(input)
@@ -55,6 +55,84 @@ struct SmallestAIAPITests {
             return
         }
         #expect(!transcription.transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        print("Transcription: \(transcription.transcription)")
+        // Explicit types demonstrate how to access every property of the generated model.
+        let status: String = transcription.status
+        let text: String = transcription.transcription
+        let language: String? = transcription.language
+        let requestID: String? = transcription.request_id
+        let totalBytes: Double? = transcription.totalBytes
+        let gender: String? = transcription.gender
+        let words: [Components.Schemas.Word]? = transcription.words
+        let utterances: [Components.Schemas.Utterance]? = transcription.utterances
+        let metadata: Components.Schemas.TranscriptionResponseMetadata? = transcription.metadata
+        let emotions: Components.Schemas.TranscriptionResponse.emotionsPayload? = transcription.emotions
+
+        printValue("status", status)
+        printValue("transcription", text)
+        printValue("language", language)
+        printValue("request_id", requestID)
+        printValue("totalBytes", totalBytes)
+        printValue("gender", gender)
+
+        // Optional containers stay visible even when the server omits them.
+        print("words: [Components.Schemas.Word]? = \(words.map { "\($0.count) entries" } ?? "nil")")
+        for (index, word) in (words ?? []).enumerated() {
+            let text: String? = word.word
+            let start: Double? = word.start
+            let end: Double? = word.end
+            let confidence: Double? = word.confidence
+            let speaker: Int? = word.speaker
+            let speakerConfidence: Double? = word.speaker_confidence
+
+            printValue("words[\(index)].word", text)
+            printValue("words[\(index)].start", start)
+            printValue("words[\(index)].end", end)
+            printValue("words[\(index)].confidence", confidence)
+            printValue("words[\(index)].speaker", speaker)
+            printValue("words[\(index)].speaker_confidence", speakerConfidence)
+        }
+
+        // Pulse Pro omits utterances and speaker labels; Pulse can return them.
+        print("utterances: [Components.Schemas.Utterance]? = \(utterances.map { "\($0.count) entries" } ?? "nil")")
+        for (index, utterance) in (utterances ?? []).enumerated() {
+            let text: String? = utterance.text
+            let start: Double? = utterance.start
+            let end: Double? = utterance.end
+            let speaker: Int? = utterance.speaker
+
+            printValue("utterances[\(index)].text", text)
+            printValue("utterances[\(index)].start", start)
+            printValue("utterances[\(index)].end", end)
+            printValue("utterances[\(index)].speaker", speaker)
+        }
+
+        print("metadata: Components.Schemas.TranscriptionResponseMetadata? = \(metadata == nil ? "nil" : "present")")
+        let duration: Double? = metadata?.duration
+        let processingTimeMS: Double? = metadata?.processing_time_ms
+        let realTimeFactor: Double? = metadata?.rtfx
+        let numberOfChunks: Double? = metadata?.num_chunks
+        let fileSize: Double? = metadata?.fileSize
+
+        printValue("metadata.duration", duration)
+        printValue("metadata.processing_time_ms", processingTimeMS)
+        printValue("metadata.rtfx", realTimeFactor)
+        printValue("metadata.num_chunks", numberOfChunks)
+        printValue("metadata.fileSize", fileSize)
+
+        // Emotion keys are dynamic; enumerate every returned label and score.
+        // Gender and emotions require their detection flags and a supporting model.
+        print("emotions: Components.Schemas.TranscriptionResponse.emotionsPayload? = \(emotions == nil ? "nil" : "present")")
+        let emotionScores: [String: Double]? = emotions?.additionalProperties
+        printValue("emotions.additionalProperties", emotionScores)
+        for label in (emotionScores ?? [:]).keys.sorted() {
+            if let score: Double = emotionScores?[label] {
+                printValue("emotions.additionalProperties[\(String(reflecting: label))]", score)
+            }
+        }
+    }
+
+    /// Prints the declared Swift type, preserving optionality and displaying missing values as nil.
+    private func printValue<Value>(_ path: String, _ value: Value) {
+        print("\(path): \(String(describing: Value.self)) = \(String(describing: value))")
     }
 }

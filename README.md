@@ -61,6 +61,9 @@ swift test --filter transcribeSpeechFile
 ```
 
 The test streams the WAV file using UsefulThings' `FileHandle` async sequence
-to `POST /waves/v1/stt/` with `model=pulse-pro` and `language=en`, checks for a
-nonempty transcription, and prints it. It makes a real, billable request when a
-key is configured and is skipped otherwise.
+to `POST /waves/v1/stt/` with `model=pulse-pro`, `language=en`, and
+`word_timestamps=true`. It checks for a nonempty transcription and prints every
+response property with its Swift type, including every word, utterance, metadata
+field, and emotion score. Missing optional values print as `nil`; some fields are
+model-specific or require additional detection flags. The test makes a real,
+billable request when a key is configured and is skipped otherwise.
