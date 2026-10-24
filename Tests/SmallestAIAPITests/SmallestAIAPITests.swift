@@ -3,6 +3,8 @@
 import Foundation
 import Testing
 import SmallestAIAPI
+import SmallestAIAPIAsyncHTTPClient
+import NIOCore
 import SmallestAIAPITypes
 import OpenAPIAsyncHTTPClient
 import OpenAPIRuntime
@@ -15,6 +17,7 @@ struct SmallestAIAPITests {
         .deletingLastPathComponent()
 
     private static var apiKey: String? {
+        guard ProcessInfo.processInfo.environment["RUN_LIVE_TESTS"] == "1" else { return nil }
         guard let value = UsefulThings.getEnvironmentVariable(
             "API_KEY", from: packageDirectory.appendingPathComponent(".env")
         ) else { return nil }
@@ -25,7 +28,7 @@ struct SmallestAIAPITests {
     // Sends a real, billable request when API_KEY is set in the environment or .env.
     @Test(
         "Transcribe 60s_speech.wav with the live Waves API",
-        .enabled(if: apiKey != nil, "Set API_KEY in the environment or the package's .env file")
+        .enabled(if: apiKey != nil, "Set RUN_LIVE_TESTS=1 and API_KEY in the environment or the package's .env file")
     )
     func transcribeSpeechFile() async throws {
         let apiKey = try #require(Self.apiKey)
@@ -39,10 +42,10 @@ struct SmallestAIAPITests {
 
         // UsefulThings makes FileHandle an AsyncSequence of byte chunks.
         let body = HTTPBody(file, length: .known(Int64(byteCount)), iterationBehavior: .single)
-        let client = Client(
+        let client = Client.asyncHTTPClient(
             serverURL: try Servers.Server1.url(),
-            transport: AsyncHTTPClientTransport(configuration: .init(timeout: .seconds(120))),
-            middlewares: [AuthenticationMiddleware(apiKey: "Bearer \(apiKey)")]
+            authentication: .apiKey("Bearer \(apiKey)"),
+            transportConfiguration: .init(timeout: .seconds(120))
         )
         let input = Operations.speechToText_transcribe.Input(
             query: .init(model: .pulse_hyphen_pro, language: .en, word_timestamps: ._true),

@@ -23,11 +23,16 @@ let package = Package(
             name: "SmallestAIAPI",
             targets: ["SmallestAIAPI"]
         ),
+        .library(name: "SmallestAIAPIURLSession", targets: ["SmallestAIAPIURLSession"]),
+        .library(name: "SmallestAIAPIAsyncHTTPClient", targets: ["SmallestAIAPIAsyncHTTPClient"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-openapi-generator.git", from: "1.10.0"),
-        .package(url: "https://github.com/apple/swift-openapi-runtime.git", from: "1.8.0"),
-        .package(url: "https://github.com/swift-server/swift-openapi-async-http-client", from: "1.1.0"),
+        .package(url: "https://github.com/apple/swift-openapi-generator.git", from: "1.13.0"),
+        .package(url: "https://github.com/apple/swift-openapi-runtime.git", from: "1.12.0"),
+        .package(url: "https://github.com/swift-server/swift-openapi-async-http-client", from: "1.5.0"),
+        .package(url: "https://github.com/apple/swift-openapi-urlsession", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-http-types", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
         .package(url: "https://github.com/atacan/UsefulThings", branch: "main"),
     ],
     targets: [
@@ -35,7 +40,8 @@ let package = Package(
         .target(
             name: "SmallestAIAPITypes",
             dependencies: [
-                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime")
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
             ]
         ),
         // Client target: Contains generated client and custom code
@@ -43,16 +49,63 @@ let package = Package(
             name: "SmallestAIAPI",
             dependencies: [
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
-                .product(name: "OpenAPIAsyncHTTPClient", package: "swift-openapi-async-http-client"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
                 .target(name: "SmallestAIAPITypes"),
             ]
         ),
-        // Tests
+        // Transport conveniences both construct the shared generated Client.
+        .target(
+            name: "SmallestAIAPIURLSession",
+            dependencies: [
+                .target(name: "SmallestAIAPI"),
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "OpenAPIURLSession", package: "swift-openapi-urlsession"),
+            ]
+        ),
+        .target(
+            name: "SmallestAIAPIAsyncHTTPClient",
+            dependencies: [
+                .target(name: "SmallestAIAPI"),
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "OpenAPIAsyncHTTPClient", package: "swift-openapi-async-http-client"),
+            ]
+        ),
+        .testTarget(
+            name: "SmallestAIAPITypesTests",
+            dependencies: [.target(name: "SmallestAIAPITypes")]
+        ),
+        .testTarget(
+            name: "SmallestAIAPIURLSessionTests",
+            dependencies: [
+                .target(name: "SmallestAIAPI"),
+                .target(name: "SmallestAIAPIURLSession"),
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "OpenAPIURLSession", package: "swift-openapi-urlsession"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ]
+        ),
+        .testTarget(
+            name: "SmallestAIAPIAsyncHTTPClientTests",
+            dependencies: [
+                .target(name: "SmallestAIAPI"),
+                .target(name: "SmallestAIAPIAsyncHTTPClient"),
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "OpenAPIAsyncHTTPClient", package: "swift-openapi-async-http-client"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ]
+        ),
+        // Shared client and authentication tests
         .testTarget(
             name: "SmallestAIAPITests",
             dependencies: [
                 .target(name: "SmallestAIAPI"),
+                .target(name: "SmallestAIAPITypes"),
+                .target(name: "SmallestAIAPIAsyncHTTPClient"),
+                .product(name: "OpenAPIAsyncHTTPClient", package: "swift-openapi-async-http-client"),
+                .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "UsefulThings", package: "UsefulThings"),
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
             ]
         ),
     ]
