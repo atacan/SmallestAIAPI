@@ -1615,11 +1615,11 @@ extension Components {
             public var status: Swift.String
             /// - Remark: Generated from `#/components/schemas/TranscriptionResponse/transcription`.
             public var transcription: Swift.String
-            /// Per-word timestamps. **Empty unless the request sets `word_timestamps=true`.** Each entry carries `word`, `start`, `end`, and `confidence` (0.0–1.0). Pulse responses with `diarize=true` also include `speaker` and `speaker_confidence`.
+            /// Per-word timestamps, returned when word_timestamps=true. Pulse also returns words when diarize=true without word_timestamps. Entries carry word, start, end, and confidence; diarized Pulse responses include speaker and speaker_confidence.
             ///
             /// - Remark: Generated from `#/components/schemas/TranscriptionResponse/words`.
             public var words: [Components.Schemas.Word]?
-            /// Sentence-level segments. Returned by `?model=pulse` only; Pulse Pro responses omit this field entirely. **Empty on Pulse unless the request sets `word_timestamps=true`** (the same flag turns on both `words[]` and `utterances[]`).
+            /// Sentence-level segments returned by Pulse when word_timestamps=true or diarize=true. Pulse Pro omits this field.
             ///
             /// - Remark: Generated from `#/components/schemas/TranscriptionResponse/utterances`.
             public var utterances: [Components.Schemas.Utterance]?
@@ -1667,19 +1667,24 @@ extension Components {
             ///
             /// - Remark: Generated from `#/components/schemas/TranscriptionResponse/emotions`.
             public var emotions: Components.Schemas.TranscriptionResponse.emotionsPayload?
+            /// Speaker turns returned by Pulse with diarize=true. Omitted when diarization is not requested or not supported.
+            ///
+            /// - Remark: Generated from `#/components/schemas/TranscriptionResponse/diarization_segments`.
+            public var diarization_segments: [Components.Schemas.DiarizationSegment]?
             /// Creates a new `TranscriptionResponse`.
             ///
             /// - Parameters:
             ///   - status:
             ///   - transcription:
-            ///   - words: Per-word timestamps. **Empty unless the request sets `word_timestamps=true`.** Each entry carries `word`, `start`, `end`, and `confidence` (0.0–1.0). Pulse responses with `diarize=true` also include `speaker` and `speaker_confidence`.
-            ///   - utterances: Sentence-level segments. Returned by `?model=pulse` only; Pulse Pro responses omit this field entirely. **Empty on Pulse unless the request sets `word_timestamps=true`** (the same flag turns on both `words[]` and `utterances[]`).
+            ///   - words: Per-word timestamps, returned when word_timestamps=true. Pulse also returns words when diarize=true without word_timestamps. Entries carry word, start, end, and confidence; diarized Pulse responses include speaker and speaker_confidence.
+            ///   - utterances: Sentence-level segments returned by Pulse when word_timestamps=true or diarize=true. Pulse Pro omits this field.
             ///   - language: Language of the transcription. Present on Pulse Pro responses; Pulse responses omit this field.
             ///   - metadata: Response metadata. Pulse responses carry `duration` and `fileSize`. Pulse Pro responses carry `duration`, `processing_time_ms`, `rtfx`, and `num_chunks`.
             ///   - request_id: Server-assigned request identifier. Present on Pulse Pro responses; Pulse responses omit this field.
             ///   - totalBytes: Bytes received. Pulse Pro only.
             ///   - gender: Detected speaker gender label. Present when `gender_detection=true` was set on the request.
             ///   - emotions: Detected emotion labels mapped to confidence scores. Present when `emotion_detection=true` was set on the request. Current known keys: `anger`, `disgust`, `fear`, `sadness`, `happiness`.
+            ///   - diarization_segments: Speaker turns returned by Pulse with diarize=true. Omitted when diarization is not requested or not supported.
             public init(
                 status: Swift.String,
                 transcription: Swift.String,
@@ -1690,7 +1695,8 @@ extension Components {
                 request_id: Swift.String? = nil,
                 totalBytes: Swift.Double? = nil,
                 gender: Swift.String? = nil,
-                emotions: Components.Schemas.TranscriptionResponse.emotionsPayload? = nil
+                emotions: Components.Schemas.TranscriptionResponse.emotionsPayload? = nil,
+                diarization_segments: [Components.Schemas.DiarizationSegment]? = nil
             ) {
                 self.status = status
                 self.transcription = transcription
@@ -1702,6 +1708,7 @@ extension Components {
                 self.totalBytes = totalBytes
                 self.gender = gender
                 self.emotions = emotions
+                self.diarization_segments = diarization_segments
             }
             public enum CodingKeys: String, CodingKey {
                 case status
@@ -1714,6 +1721,7 @@ extension Components {
                 case totalBytes
                 case gender
                 case emotions
+                case diarization_segments
             }
         }
         /// Returned by Pulse Pro when `webhook_url` is set. The transcription arrives on the webhook when ready.
@@ -2607,6 +2615,60 @@ extension Components {
             }
             public enum CodingKeys: String, CodingKey {
                 case error
+            }
+        }
+        /// Audio-by-URL request. Send as application/json instead of application/octet-stream.
+        ///
+        /// - Remark: Generated from `#/components/schemas/SttUrlRequest`.
+        public struct SttUrlRequest: Codable, Hashable, Sendable {
+            /// Publicly accessible audio URL for Pulse or Pulse Pro.
+            ///
+            /// - Remark: Generated from `#/components/schemas/SttUrlRequest/url`.
+            public var url: Swift.String
+            /// Creates a new `SttUrlRequest`.
+            ///
+            /// - Parameters:
+            ///   - url: Publicly accessible audio URL for Pulse or Pulse Pro.
+            public init(url: Swift.String) {
+                self.url = url
+            }
+            public enum CodingKeys: String, CodingKey {
+                case url
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/DiarizationSegment`.
+        public struct DiarizationSegment: Codable, Hashable, Sendable {
+            /// Start time in seconds.
+            ///
+            /// - Remark: Generated from `#/components/schemas/DiarizationSegment/start`.
+            public var start: Swift.Double
+            /// End time in seconds.
+            ///
+            /// - Remark: Generated from `#/components/schemas/DiarizationSegment/end`.
+            public var end: Swift.Double
+            /// Speaker identifier.
+            ///
+            /// - Remark: Generated from `#/components/schemas/DiarizationSegment/speaker`.
+            public var speaker: Swift.Int
+            /// Creates a new `DiarizationSegment`.
+            ///
+            /// - Parameters:
+            ///   - start: Start time in seconds.
+            ///   - end: End time in seconds.
+            ///   - speaker: Speaker identifier.
+            public init(
+                start: Swift.Double,
+                end: Swift.Double,
+                speaker: Swift.Int
+            ) {
+                self.start = start
+                self.end = end
+                self.speaker = speaker
+            }
+            public enum CodingKeys: String, CodingKey {
+                case start
+                case end
+                case speaker
             }
         }
     }

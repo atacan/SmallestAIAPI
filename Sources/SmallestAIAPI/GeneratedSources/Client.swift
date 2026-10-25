@@ -1704,7 +1704,7 @@ public struct Client: APIProtocol {
     ///
     /// Transcribe an audio file. The model is chosen via `?model=`:
     ///
-    /// - `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Raw bytes only; pass `webhook_url` to receive transcription asynchronously on long files.
+    /// - `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Accepts raw bytes or a JSON audio URL; pass `webhook_url` to receive transcription asynchronously on long files.
     /// - `?model=pulse`: multilingual transcription (21 streaming + 12 pre-recorded languages), supports both raw bytes and audio-by-URL.
     ///
     /// ## When to use this
@@ -1716,7 +1716,7 @@ public struct Client: APIProtocol {
     /// ## Input methods
     ///
     /// - **Raw bytes**: `Content-Type: application/octet-stream` with the audio in the body. All knobs are query parameters.
-    /// - **URL (`?model=pulse` only)**: `Content-Type: application/json` with `{"url": "..."}` in the body.
+    /// - **URL (both models)**: `Content-Type: application/json` with `{"url": "..."}` in the body.
     ///
     /// ## Examples
     ///
@@ -1781,7 +1781,7 @@ public struct Client: APIProtocol {
     ///
     /// - **`model` is required.** Missing or invalid values return `400` with an enum-validation error.
     /// - **Pulse Pro is English only.** Pass `language=en`. Any other value returns `400 invalid_enum_value` (`Expected 'en', received '<x>'`).
-    /// - **Pulse Pro does not support audio-by-URL.** Send raw bytes or use `?model=pulse` for the URL flow.
+    /// - **Both models accept audio-by-URL.** Send `Content-Type: application/json` with a `url` property. This was verified for Pulse and Pulse Pro on 2026-10-25.
     ///
     ///
     /// - Remark: HTTP `POST /waves/v1/stt/`.
@@ -1895,13 +1895,17 @@ public struct Client: APIProtocol {
                 )
                 let body: OpenAPIRuntime.HTTPBody?
                 switch input.body {
-                case .none:
-                    body = nil
                 case let .binary(value):
-                    body = try converter.setOptionalRequestBodyAsBinary(
+                    body = try converter.setRequiredRequestBodyAsBinary(
                         value,
                         headerFields: &request.headerFields,
                         contentType: "application/octet-stream"
+                    )
+                case let .json(value):
+                    body = try converter.setRequiredRequestBodyAsJSON(
+                        value,
+                        headerFields: &request.headerFields,
+                        contentType: "application/json; charset=utf-8"
                     )
                 }
                 return (request, body)

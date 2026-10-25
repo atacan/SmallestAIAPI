@@ -1,0 +1,1 @@
+{"status":"error","message":"Invalid query parameters","errors":[{"received":"True","code":"invalid_enum_value","options":["true","false"],"path":["word_timestamps"],"message":"Invalid enum value. Expected 'true' | 'false', received 'True'"}]}

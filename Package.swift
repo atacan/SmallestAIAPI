@@ -33,7 +33,6 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-urlsession", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-http-types", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
-        .package(url: "https://github.com/atacan/UsefulThings", branch: "main"),
     ],
     targets: [
         // Types target: Contains generated types from OpenAPI spec
@@ -72,7 +71,8 @@ let package = Package(
         ),
         .testTarget(
             name: "SmallestAIAPITypesTests",
-            dependencies: [.target(name: "SmallestAIAPITypes")]
+            dependencies: [.target(name: "SmallestAIAPITypes")],
+            resources: [.copy("Resources")]
         ),
         .testTarget(
             name: "SmallestAIAPIURLSessionTests",
@@ -103,7 +103,6 @@ let package = Package(
                 .target(name: "SmallestAIAPIAsyncHTTPClient"),
                 .product(name: "OpenAPIAsyncHTTPClient", package: "swift-openapi-async-http-client"),
                 .product(name: "NIOCore", package: "swift-nio"),
-                .product(name: "UsefulThings", package: "UsefulThings"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "HTTPTypes", package: "swift-http-types"),
             ]

@@ -8,7 +8,6 @@ import NIOCore
 import SmallestAIAPITypes
 import OpenAPIAsyncHTTPClient
 import OpenAPIRuntime
-import UsefulThings
 
 struct SmallestAIAPITests {
     private static let packageDirectory = URL(fileURLWithPath: #filePath)
@@ -18,33 +17,26 @@ struct SmallestAIAPITests {
 
     private static var apiKey: String? {
         guard ProcessInfo.processInfo.environment["RUN_LIVE_TESTS"] == "1" else { return nil }
-        guard let value = UsefulThings.getEnvironmentVariable(
-            "API_KEY", from: packageDirectory.appendingPathComponent(".env")
-        ) else { return nil }
+        guard let value = ProcessInfo.processInfo.environment["SMALLESTAI_API_KEY"]
+            ?? ProcessInfo.processInfo.environment["API_KEY"] else { return nil }
         let key = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return key.isEmpty || key == "your_api_key_here" ? nil : key
     }
 
-    // Sends a real, billable request when API_KEY is set in the environment or .env.
+    // Sends a real, billable request when SMALLESTAI_API_KEY or API_KEY is set in the environment.
     @Test(
         "Transcribe 60s_speech.wav with the live Waves API",
-        .enabled(if: apiKey != nil, "Set RUN_LIVE_TESTS=1 and API_KEY in the environment or the package's .env file")
+        .enabled(if: apiKey != nil, "Set RUN_LIVE_TESTS=1 and SMALLESTAI_API_KEY (or API_KEY) in the environment")
     )
     func transcribeSpeechFile() async throws {
         let apiKey = try #require(Self.apiKey)
         let audioURL = Self.packageDirectory.appendingPathComponent("60s_speech.wav")
-        let file = try FileHandle(forReadingFrom: audioURL)
-        defer { try? file.close() }
-
-        let byteCount = try file.seekToEnd()
-        try file.seek(toOffset: 0)
-        #expect(byteCount > 0)
-
-        // UsefulThings makes FileHandle an AsyncSequence of byte chunks.
-        let body = HTTPBody(file, length: .known(Int64(byteCount)), iterationBehavior: .single)
+        let audio = try Data(contentsOf: audioURL)
+        #expect(!audio.isEmpty)
+        let body = HTTPBody(audio)
         let client = Client.asyncHTTPClient(
             serverURL: try Servers.Server1.url(),
-            authentication: .apiKey("Bearer \(apiKey)"),
+            authentication: .bearer(apiKey),
             transportConfiguration: .init(timeout: .seconds(120))
         )
         let input = Operations.speechToText_transcribe.Input(

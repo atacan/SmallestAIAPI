@@ -3065,7 +3065,7 @@ public enum Operations {
     ///
     /// Transcribe an audio file. The model is chosen via `?model=`:
     ///
-    /// - `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Raw bytes only; pass `webhook_url` to receive transcription asynchronously on long files.
+    /// - `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Accepts raw bytes or a JSON audio URL; pass `webhook_url` to receive transcription asynchronously on long files.
     /// - `?model=pulse`: multilingual transcription (21 streaming + 12 pre-recorded languages), supports both raw bytes and audio-by-URL.
     ///
     /// ## When to use this
@@ -3077,7 +3077,7 @@ public enum Operations {
     /// ## Input methods
     ///
     /// - **Raw bytes**: `Content-Type: application/octet-stream` with the audio in the body. All knobs are query parameters.
-    /// - **URL (`?model=pulse` only)**: `Content-Type: application/json` with `{"url": "..."}` in the body.
+    /// - **URL (both models)**: `Content-Type: application/json` with `{"url": "..."}` in the body.
     ///
     /// ## Examples
     ///
@@ -3142,7 +3142,7 @@ public enum Operations {
     ///
     /// - **`model` is required.** Missing or invalid values return `400` with an enum-validation error.
     /// - **Pulse Pro is English only.** Pass `language=en`. Any other value returns `400 invalid_enum_value` (`Expected 'en', received '<x>'`).
-    /// - **Pulse Pro does not support audio-by-URL.** Send raw bytes or use `?model=pulse` for the URL flow.
+    /// - **Both models accept audio-by-URL.** Send `Content-Type: application/json` with a `url` property. This was verified for Pulse and Pulse Pro on 2026-10-25.
     ///
     ///
     /// - Remark: HTTP `POST /waves/v1/stt/`.
@@ -3154,28 +3154,17 @@ public enum Operations {
             public struct Query: Sendable, Hashable {
                 /// Selects which ASR model handles the request. Required; missing or invalid values return `400`.
                 ///
-                /// - `pulse-pro`: English only, leaderboard-ranked accuracy, raw bytes only; supports async via `webhook_url`.
+                /// - `pulse-pro`: English only, leaderboard-ranked accuracy, raw bytes or JSON audio URL; supports async via `webhook_url`.
                 /// - `pulse`: multilingual (21 streaming + 12 pre-recorded languages), raw bytes OR URL.
                 ///
                 ///
                 /// - Remark: Generated from `#/paths/waves/v1/stt/POST/query/model`.
                 public var model: Components.Schemas.WavesV1SttPostParametersModel
-                /// Language of the audio file. This endpoint is **Pre-Recorded (HTTP)**. For streaming, use `WSS /waves/v1/stt/live` (different supported-language set).
+                /// Language of pre-recorded HTTP audio. Pass an explicit language for predictable behavior. Pulse Pro accepts only en and defaulted to en when omitted in captures on 2026-10-25. Pulse omission attempted multi and returned LANGUAGE_NOT_ENABLED_IN_REGION in ap-south-1.
                 ///
-                /// Always pass `language`. To auto-detect, pass one of the regional aggregators in the enum. On Pulse Pro, only `en` is accepted; any other value returns HTTP 400.
+                /// Single-language codes: en, hi, de, es, ru, it, fr, nl, pt, zh, ja, ko. Auto-detect aggregators: multi-eu (European languages and en), multi-asian (zh, ko, ja, en), multi-indic (en, hi, gu, mr, bn, or). The latter four Indic codes have not been verified as standalone pre-recorded language values and are not exposed by this enum.
                 ///
-                /// **Single-language codes:** `en`, `hi`, `de`, `es`, `ru`, `it`, `fr`, `nl`, `pt`, `zh`, `ja`, `ko`.
-                ///
-                /// **Regional auto-detect aggregators** for unknown audio:
-                /// - `multi-eu` auto-detects across the European codes plus `en`.
-                /// - `multi-asian` auto-detects across `zh`, `ko`, `ja`, `en`.
-                /// - `multi-indic` auto-detects across `en`, `hi`, `gu`, `mr`, `bn`, `or`. India region only.
-                ///
-                /// **Region gating.** Indic single-language codes and `multi-indic` are enabled in the India region only. East Asian codes and `multi-asian` are enabled in the US region only. Set `language` explicitly when you know the audio language; omission may return `LANGUAGE_NOT_ENABLED_IN_REGION` if the auto-detect aggregator is not enabled for your region.
-                ///
-                /// - **Pulse Pro**: pass `en`. Any other value returns HTTP 400 at validation.
-                /// - **Pulse**: pass any code above. See the [Pulse model card](/model-cards/speech-to-text/pulse) for the full table with language names.
-                ///
+                /// Availability may depend on model, account, and serving region. Do not assume strict US-only or India-only gating from the hostname: zh and multi-indic both succeeded through api.smallest.ai serving from ap-south-1 on 2026-10-25. For regional access use api.us.smallest.ai or api.india.smallest.ai; handle LANGUAGE_NOT_ENABLED_IN_REGION errors. Streaming uses a different language set.
                 ///
                 /// - Remark: Generated from `#/paths/waves/v1/stt/POST/query/language`.
                 public var language: Components.Schemas.WavesV1SttPostParametersLanguage?
@@ -3183,13 +3172,11 @@ public enum Operations {
                 ///
                 /// Must be the lowercase string `"true"` or `"false"`. Any other value (including integer or capitalized variants) returns HTTP 400.
                 ///
+                /// Pulse also returns words and utterances with diarize=true even when word_timestamps is omitted. Pulse Pro ignores diarize.
                 ///
                 /// - Remark: Generated from `#/paths/waves/v1/stt/POST/query/word_timestamps`.
                 public var word_timestamps: Components.Schemas.WavesV1SttPostParametersWordTimestamps?
-                /// Multi-speaker identification. Adds per-word and per-utterance speaker labels.
-                ///
-                /// Must be the lowercase string `"true"` or `"false"`. Any other value (including integer or capitalized variants) returns HTTP 400.
-                ///
+                /// Pulse only: identify speakers and return per-word labels, utterances, and diarization_segments. Pulse Pro accepted this parameter but ignored it in captures on 2026-10-25. Must be the lowercase string "true" or "false"; other values return HTTP 400.
                 ///
                 /// - Remark: Generated from `#/paths/waves/v1/stt/POST/query/diarize`.
                 public var diarize: Components.Schemas.WavesV1SttPostParametersDiarize?
@@ -3203,6 +3190,7 @@ public enum Operations {
                 ///
                 /// See [Keyword Boosting](/models/speech-to-text/features/keyword-boosting) for the full contract and worked examples.
                 ///
+                /// Pulse Pro accepted but ignored this parameter in captures on 2026-10-25.
                 ///
                 /// - Remark: Generated from `#/paths/waves/v1/stt/POST/query/keywords`.
                 public var keywords: Swift.String?
@@ -3250,9 +3238,9 @@ public enum Operations {
                 ///
                 /// - Parameters:
                 ///   - model: Selects which ASR model handles the request. Required; missing or invalid values return `400`.
-                ///   - language: Language of the audio file. This endpoint is **Pre-Recorded (HTTP)**. For streaming, use `WSS /waves/v1/stt/live` (different supported-language set).
+                ///   - language: Language of pre-recorded HTTP audio. Pass an explicit language for predictable behavior. Pulse Pro accepts only en and defaulted to en when omitted in captures on 2026-10-25. Pulse omission attempted multi and returned LANGUAGE_NOT_ENABLED_IN_REGION in ap-south-1.
                 ///   - word_timestamps: Include the per-word `words[]` array in the response. Each entry carries the recognized `word`, its `start`/`end` timestamps, and a per-word `confidence` score (0.0 to 1.0). With `diarize=true`, entries also include `speaker`.
-                ///   - diarize: Multi-speaker identification. Adds per-word and per-utterance speaker labels.
+                ///   - diarize: Pulse only: identify speakers and return per-word labels, utterances, and diarization_segments. Pulse Pro accepted this parameter but ignored it in captures on 2026-10-25. Must be the lowercase string "true" or "false"; other values return HTTP 400.
                 ///   - keywords: Pulse only. Boost recognition of specific words or phrases for this request. The same parameter works on the realtime WebSocket endpoint.
                 ///   - webhook_url: If set, the response is `200` with `{"status": "processing", "request_id": "..."}` immediately, and the full transcription is delivered to this URL when ready. Use for long files where you do not want to hold an HTTP connection open.
                 ///   - webhook_method: HTTP method to use when calling the webhook.
@@ -3317,8 +3305,10 @@ public enum Operations {
             @frozen public enum Body: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/waves/v1/stt/POST/requestBody/content/application\/octet-stream`.
                 case binary(OpenAPIRuntime.HTTPBody)
+                /// - Remark: Generated from `#/paths/waves/v1/stt/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.SttUrlRequest)
             }
-            public var body: Operations.speechToText_transcribe.Input.Body?
+            public var body: Operations.speechToText_transcribe.Input.Body
             /// Creates a new `Input`.
             ///
             /// - Parameters:
@@ -3328,7 +3318,7 @@ public enum Operations {
             public init(
                 query: Operations.speechToText_transcribe.Input.Query,
                 headers: Operations.speechToText_transcribe.Input.Headers = .init(),
-                body: Operations.speechToText_transcribe.Input.Body? = nil
+                body: Operations.speechToText_transcribe.Input.Body
             ) {
                 self.query = query
                 self.headers = headers

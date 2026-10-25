@@ -13,7 +13,7 @@ struct AuthenticationTests {
         "speechToText_transcribe", "electron_complete",
     ])
     func protectedOperationSendsExactProviderHeader(operationID: String) async throws {
-        let middleware = AuthenticationMiddleware(authentication: .apiKey("Bearer offline-key"))
+        let middleware = AuthenticationMiddleware(authentication: .bearer("offline-key"))
         _ = try await middleware.intercept(
             HTTPRequest(method: .post, scheme: "https", authority: "example.invalid", path: "/"),
             body: nil, baseURL: URL(string: "https://example.invalid")!, operationID: operationID
@@ -43,7 +43,7 @@ struct AuthenticationTests {
 
     @Test func publicVoicesDoesNotResolveCredentials() async throws {
         let tokens = Tokens()
-        let middleware = AuthenticationMiddleware(authentication: .apiKey { await tokens.next() })
+        let middleware = AuthenticationMiddleware(authentication: .bearer { await tokens.next() })
         _ = try await middleware.intercept(
             HTTPRequest(method: .get, scheme: "https", authority: "example.invalid", path: "/"),
             body: nil, baseURL: URL(string: "https://example.invalid")!, operationID: "voices_getWavesVoices"
@@ -55,7 +55,7 @@ struct AuthenticationTests {
     }
 
     @Test func missingAndWrongSchemeCredentialsFailBeforeTransport() async throws {
-        for authentication in [Authentication.none, .bearer("offline-key"), .credentials(["wrong": .init("key")])] {
+        for authentication in [Authentication.none, .apiKey("offline-key"), .credentials(["wrong": .init("key")])] {
             do {
                 _ = try await AuthenticationMiddleware(authentication: authentication).intercept(
                     HTTPRequest(method: .post, scheme: "https", authority: "example.invalid", path: "/"),
@@ -77,6 +77,6 @@ private actor Tokens {
     var count = 0
     func next() -> String {
         count += 1
-        return "Bearer offline-\(count)"
+        return "offline-\(count)"
     }
 }

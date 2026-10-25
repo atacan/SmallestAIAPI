@@ -1,0 +1,1 @@
+{"status":"error","message":"Invalid model query parameter.","errors":[{"received":"pulse-9999","code":"invalid_enum_value","options":["pulse","pulse-pro"],"path":["model"],"message":"Invalid enum value. Expected 'pulse' | 'pulse-pro', received 'pulse-9999'"}]}

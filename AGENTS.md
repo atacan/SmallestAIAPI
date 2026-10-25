@@ -22,7 +22,7 @@ import SmallestAIAPIURLSession
 
 let client = Client.urlSession(
     serverURL: try Servers.Server1.url(),
-    authentication: .apiKey("Bearer \(apiKey)")
+    authentication: .bearer(apiKey)
 )
 ```
 
@@ -36,13 +36,14 @@ import NIOCore
 
 let client = Client.asyncHTTPClient(
     serverURL: try Servers.Server1.url(),
-    authentication: .apiKey("Bearer \(apiKey)"),
+    authentication: .bearer(apiKey),
     transportConfiguration: .init(timeout: .seconds(120))
 )
 ```
 
-BearerAuth is a header API key in the final overlaid specification. Preserve the
-complete Bearer prefix through `.apiKey(...)`; `.bearer(...)` is the wrong scheme.
+BearerAuth is HTTP bearer in the final overlaid specification. Pass an unprefixed
+credential through `.bearer(...)`; middleware adds the Bearer prefix. Named
+BearerAuth credentials also take unprefixed values. `.apiKey(...)` is the wrong scheme.
 Shared middleware lives in the core module; the old Types middleware API is retired.
 The public voices operation has no security requirement. Regenerate authentication
 metadata from the original spec/overlay instead of editing GeneratedSecurity.
@@ -53,12 +54,13 @@ After dependency changes run `swift package resolve`, then `make regenerate`,
 `swift build`, and the offline suites:
 
 ```sh
-swift test --filter 'AuthenticationTests|FactoryTests|ResponseDecodingTests'
+swift test --filter 'AuthenticationTests|FactoryTests|ResponseDecodingTests|RequestSerializationTests'
 ```
 
 Live tests load credentials only with explicit RUN_LIVE_TESTS=1. Do not run them
-or read local secrets during offline verification. Keep the UsefulThings streaming
-body and live transcription test's 120-second timeout when changing client setup.
+or read local secrets during offline verification. Keep the live transcription
+test's 120-second timeout. Credentials come only from SMALLESTAI_API_KEY or API_KEY in the environment; wrap Data(contentsOf:)
+in HTTPBody for the local WAV. Do not restore the UsefulThings branch dependency.
 Preserve original spec, overlays, configs, editable factories, tests, platform
 settings, and custom Makefile recipes on reruns. `make generate` only regenerates
 Swift code; `make regenerate` also updates transformations and operation security.

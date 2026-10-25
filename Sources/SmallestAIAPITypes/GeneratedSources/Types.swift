@@ -262,7 +262,7 @@ public protocol APIProtocol: Sendable {
     ///
     /// Transcribe an audio file. The model is chosen via `?model=`:
     ///
-    /// - `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Raw bytes only; pass `webhook_url` to receive transcription asynchronously on long files.
+    /// - `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Accepts raw bytes or a JSON audio URL; pass `webhook_url` to receive transcription asynchronously on long files.
     /// - `?model=pulse`: multilingual transcription (21 streaming + 12 pre-recorded languages), supports both raw bytes and audio-by-URL.
     ///
     /// ## When to use this
@@ -274,7 +274,7 @@ public protocol APIProtocol: Sendable {
     /// ## Input methods
     ///
     /// - **Raw bytes**: `Content-Type: application/octet-stream` with the audio in the body. All knobs are query parameters.
-    /// - **URL (`?model=pulse` only)**: `Content-Type: application/json` with `{"url": "..."}` in the body.
+    /// - **URL (both models)**: `Content-Type: application/json` with `{"url": "..."}` in the body.
     ///
     /// ## Examples
     ///
@@ -339,7 +339,7 @@ public protocol APIProtocol: Sendable {
     ///
     /// - **`model` is required.** Missing or invalid values return `400` with an enum-validation error.
     /// - **Pulse Pro is English only.** Pass `language=en`. Any other value returns `400 invalid_enum_value` (`Expected 'en', received '<x>'`).
-    /// - **Pulse Pro does not support audio-by-URL.** Send raw bytes or use `?model=pulse` for the URL flow.
+    /// - **Both models accept audio-by-URL.** Send `Content-Type: application/json` with a `url` property. This was verified for Pulse and Pulse Pro on 2026-10-25.
     ///
     ///
     /// - Remark: HTTP `POST /waves/v1/stt/`.
@@ -765,7 +765,7 @@ extension APIProtocol {
     ///
     /// Transcribe an audio file. The model is chosen via `?model=`:
     ///
-    /// - `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Raw bytes only; pass `webhook_url` to receive transcription asynchronously on long files.
+    /// - `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Accepts raw bytes or a JSON audio URL; pass `webhook_url` to receive transcription asynchronously on long files.
     /// - `?model=pulse`: multilingual transcription (21 streaming + 12 pre-recorded languages), supports both raw bytes and audio-by-URL.
     ///
     /// ## When to use this
@@ -777,7 +777,7 @@ extension APIProtocol {
     /// ## Input methods
     ///
     /// - **Raw bytes**: `Content-Type: application/octet-stream` with the audio in the body. All knobs are query parameters.
-    /// - **URL (`?model=pulse` only)**: `Content-Type: application/json` with `{"url": "..."}` in the body.
+    /// - **URL (both models)**: `Content-Type: application/json` with `{"url": "..."}` in the body.
     ///
     /// ## Examples
     ///
@@ -842,7 +842,7 @@ extension APIProtocol {
     ///
     /// - **`model` is required.** Missing or invalid values return `400` with an enum-validation error.
     /// - **Pulse Pro is English only.** Pass `language=en`. Any other value returns `400 invalid_enum_value` (`Expected 'en', received '<x>'`).
-    /// - **Pulse Pro does not support audio-by-URL.** Send raw bytes or use `?model=pulse` for the URL flow.
+    /// - **Both models accept audio-by-URL.** Send `Content-Type: application/json` with a `url` property. This was verified for Pulse and Pulse Pro on 2026-10-25.
     ///
     ///
     /// - Remark: HTTP `POST /waves/v1/stt/`.
@@ -850,7 +850,7 @@ extension APIProtocol {
     public func speechToText_transcribe(
         query: Operations.speechToText_transcribe.Input.Query,
         headers: Operations.speechToText_transcribe.Input.Headers = .init(),
-        body: Operations.speechToText_transcribe.Input.Body? = nil
+        body: Operations.speechToText_transcribe.Input.Body
     ) async throws -> Operations.speechToText_transcribe.Output {
         try await speechToText_transcribe(Operations.speechToText_transcribe.Input(
             query: query,
@@ -982,6 +982,42 @@ public enum Servers {
     public static func server1() throws -> Foundation.URL {
         try Foundation.URL(
             validatingOpenAPIServerURL: "https://api.smallest.ai",
+            variables: []
+        )
+    }
+    /// US region (Oregon). Mint and use access tokens through this same region-pinned host.
+    public enum Server2 {
+        /// US region (Oregon). Mint and use access tokens through this same region-pinned host.
+        public static func url() throws -> Foundation.URL {
+            try Foundation.URL(
+                validatingOpenAPIServerURL: "https://api.us.smallest.ai",
+                variables: []
+            )
+        }
+    }
+    /// US region (Oregon). Mint and use access tokens through this same region-pinned host.
+    @available(*, deprecated, renamed: "Servers.Server2.url")
+    public static func server2() throws -> Foundation.URL {
+        try Foundation.URL(
+            validatingOpenAPIServerURL: "https://api.us.smallest.ai",
+            variables: []
+        )
+    }
+    /// India region (Mumbai). Mint and use access tokens through this same region-pinned host.
+    public enum Server3 {
+        /// India region (Mumbai). Mint and use access tokens through this same region-pinned host.
+        public static func url() throws -> Foundation.URL {
+            try Foundation.URL(
+                validatingOpenAPIServerURL: "https://api.india.smallest.ai",
+                variables: []
+            )
+        }
+    }
+    /// India region (Mumbai). Mint and use access tokens through this same region-pinned host.
+    @available(*, deprecated, renamed: "Servers.Server3.url")
+    public static func server3() throws -> Foundation.URL {
+        try Foundation.URL(
+            validatingOpenAPIServerURL: "https://api.india.smallest.ai",
             variables: []
         )
     }

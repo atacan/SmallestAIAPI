@@ -21,7 +21,7 @@ import SmallestAIAPIURLSession
 
 let client = Client.urlSession(
     serverURL: try Servers.Server1.url(),
-    authentication: .apiKey("Bearer \(apiKey)")
+    authentication: .bearer(apiKey)
 )
 ```
 
@@ -36,18 +36,18 @@ import NIOCore
 
 let client = Client.asyncHTTPClient(
     serverURL: try Servers.Server1.url(),
-    authentication: .apiKey("Bearer \(apiKey)"),
+    authentication: .bearer(apiKey),
     transportConfiguration: .init(timeout: .seconds(120))
 )
 ```
 
-The final specification calls its scheme `BearerAuth` but defines it as a header
-API key. Supply the complete `Bearer <key>` value using `.apiKey(...)`, or named
-credentials `["BearerAuth": .init("Bearer <key>")]` with
-`Authentication.credentials(...)`. `.bearer(...)` does not match this scheme.
-Providers such as `.apiKey { ... }` are evaluated per authenticated request;
-the public voices operation does not require credentials. Protected operations
-fail before transport if credentials are missing.
+The overlaid specification declares `BearerAuth` as HTTP bearer authentication.
+Pass an unprefixed API key or supported access token to `.bearer(...)`; the
+middleware adds `Bearer `. Named credentials also take unprefixed values:
+`Authentication.credentials(["BearerAuth": .init(apiKey)])`. Providers such as
+`.bearer { ... }` are evaluated per authenticated request. The public voices
+operation does not require credentials. Protected operations fail before transport
+if credentials are missing or the wrong scheme is supplied.
 
 The legacy `SmallestAIAPITypes.AuthenticationMiddleware(apiKey:)` API has been
 retired. Custom transports can use the core client's `authentication:` initializer
@@ -67,7 +67,7 @@ the caller.
 make regenerate # Transform the original specification and generate Swift sources (requires uv)
 make generate   # Generate Swift sources from the transformed openapi.json
 swift build
-swift test --filter 'AuthenticationTests|FactoryTests|ResponseDecodingTests'
+swift test --filter 'AuthenticationTests|FactoryTests|ResponseDecodingTests|RequestSerializationTests'
 ```
 
 Keep `original_openapi.json` as the source specification. Add manual schema fixes
@@ -80,9 +80,9 @@ build and test the final generated output. `make generate` alone does not update
 schema transformations or operation authentication metadata.
 
 Offline suites use local fixtures and do not read `.env` or make HTTP requests.
-Live credential loading is explicitly gated by `RUN_LIVE_TESTS=1`. If authentication
-fails, check the exact security scheme and requirement in `openapi.json` before
-editing helpers; change the original spec or overlay for persistent spec fixes.
+Live environment credential loading is explicitly gated by `RUN_LIVE_TESTS=1`.
+If authentication fails, check the exact security scheme and requirement in `openapi.json` before
+editing helpers; use the overlay for persistent spec fixes.
 When dependency resolution reports an unsupported tools-version, select a compatible
 Swift toolchain and compare dependency manifest headers in `.build/checkouts`.
 
@@ -118,21 +118,63 @@ credential before removing it; deleting it from the current file does not
 remove it from Git history. Keep real credentials in the ignored `.env` file
 or environment variables.
 
+## Initial stable release and migration
+
+The initial stable release is **1.0.0**. This release changes the pre-release
+SDK's authentication contract: replace `.apiKey("Bearer \(apiKey)")` with
+`.bearer(apiKey)`, and remove the prefix from named `BearerAuth` credentials.
+STT now requires an explicit body, and its body enum includes `.json`; update
+exhaustive body switches accordingly. These changes require caller migration.
+
+Both Pulse and Pulse Pro accept audio URLs:
+
+```swift
+let response = try await client.speechToText_transcribe(.init(
+    query: .init(model: .pulse, language: .en),
+    body: .json(.init(url: "https://example.com/audio.wav"))
+))
+```
+
+`TranscriptionResponse.diarization_segments` exposes Pulse speaker turns when
+`diarize=true`. Pulse also returns words and utterances with diarization alone.
+Pulse Pro accepted but ignored `diarize` and `keywords` in the 2026-10-25 captures.
+Pass an explicit language for predictable behavior: Pulse Pro defaulted to `en`,
+while Pulse omission returned `LANGUAGE_NOT_ENABLED_IN_REGION` in `ap-south-1`.
+The individual `gu`, `mr`, `bn`, and `or` language values remain unverified and
+are intentionally absent from the enum; no live verification was run for this release.
+
+`Servers.Server1` retains `https://api.smallest.ai`. Use `Servers.Server2` for
+Oregon (`https://api.us.smallest.ai`) or `Servers.Server3` for Mumbai
+(`https://api.india.smallest.ai`). Mint and use access tokens in the same region.
+The scheme accepts tokens only on routes documented by `auth_create_access_token`;
+use an API key to mint tokens and for administrative routes.
+
+The manifest retains `swift-openapi-generator` as a development-tool dependency:
+`make generate` and the bootstrapper both invoke it through `swift run`.
+UsefulThings and its branch dependency have been removed.
+
+Offline response tests load unedited TranscriptionKit captures with provenance in
+`Tests/SmallestAIAPITypesTests/Resources/README.md`. The acknowledgement fixture is
+identified separately as a synthetic OpenAPI example. Run the complete offline
+verification with:
+
+```sh
+swift build
+swift test --filter 'AuthenticationTests|FactoryTests|ResponseDecodingTests|RequestSerializationTests'
+```
+
 ## Live transcription example
 
-Set `API_KEY` in your environment or add `API_KEY=your_actual_key` to a `.env`
-file at the package root. Keep the key without a `Bearer` prefix; the test adds it.
-Place `60s_speech.wav` at the package root, then run:
+Set `SMALLESTAI_API_KEY` (or `API_KEY`) in the process environment, without a
+`Bearer` prefix. Place `60s_speech.wav` at the package root, then explicitly opt in:
 
 ```sh
 RUN_LIVE_TESTS=1 swift test --filter transcribeSpeechFile
 ```
 
-The test streams the WAV file using UsefulThings' `FileHandle` async sequence
-to `POST /waves/v1/stt/` with `model=pulse-pro`, `language=en`, and
-`word_timestamps=true`. It checks for a nonempty transcription and prints every
-response property with its Swift type, including every word, utterance, metadata
-field, and emotion score. Missing optional values print as `nil`; some fields are
-model-specific or require additional detection flags. The test makes a real,
-billable request only when `RUN_LIVE_TESTS=1` and a key are configured. It uses the
-AsyncHTTPClient factory with the existing 120-second timeout and is skipped otherwise.
+The test loads the WAV with `Data(contentsOf:)`, wraps it in `HTTPBody`, and sends
+it to STT with `model=pulse-pro`, `language=en`, and `word_timestamps=true`.
+It keeps the 120-second timeout, checks for a nonempty transcription, and prints
+response fields. This makes a real, billable request and is skipped unless both
+the explicit live gate and an environment credential are supplied. It does not
+read `.env` files.

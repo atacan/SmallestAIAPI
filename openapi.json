@@ -714,7 +714,7 @@
       "post": {
         "operationId": "speechToText_transcribe",
         "summary": "Transcribe (Pre-recorded)",
-        "description": "Transcribe an audio file. The model is chosen via `?model=`:\n\n- `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Raw bytes only; pass `webhook_url` to receive transcription asynchronously on long files.\n- `?model=pulse`: multilingual transcription (21 streaming + 12 pre-recorded languages), supports both raw bytes and audio-by-URL.\n\n## When to use this\n\nUse this endpoint when you have a complete audio file (call recording, voicemail, podcast episode) and want the transcript back in one response. For live transcription as audio arrives, use the realtime WebSocket endpoint (`WS /waves/v1/stt/live?model=pulse`).\n\nPulse Pro is HTTP-only.\n\n## Input methods\n\n- **Raw bytes**: `Content-Type: application/octet-stream` with the audio in the body. All knobs are query parameters.\n- **URL (`?model=pulse` only)**: `Content-Type: application/json` with `{\"url\": \"...\"}` in the body.\n\n## Examples\n\n**cURL**: Pulse Pro, sync\n```bash\ncurl -X POST \"https://api.smallest.ai/waves/v1/stt/?model=pulse-pro&language=en&word_timestamps=true\" \\\n  -H \"Authorization: Bearer $SMALLEST_API_KEY\" \\\n  -H \"Content-Type: application/octet-stream\" \\\n  --data-binary \"@./call.wav\"\n```\n\n**cURL**: Pulse Pro, async via webhook\n```bash\ncurl -X POST \"https://api.smallest.ai/waves/v1/stt/?model=pulse-pro&language=en&webhook_url=https://your.app/cb\" \\\n  -H \"Authorization: Bearer $SMALLEST_API_KEY\" \\\n  -H \"Content-Type: application/octet-stream\" \\\n  --data-binary \"@./call.wav\"\n```\nReturns `200 { \"status\": \"processing\", \"request_id\": \"...\" }` immediately. The webhook receives the full transcription when ready.\n\n**cURL**: Pulse, audio-by-URL\n```bash\ncurl -X POST \"https://api.smallest.ai/waves/v1/stt/?model=pulse&language=en\" \\\n  -H \"Authorization: Bearer $SMALLEST_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"url\": \"https://your-bucket.s3.amazonaws.com/call.wav\"}'\n```\n\n**Python**\n```python\nimport requests\n\nwith open(\"./call.wav\", \"rb\") as f:\n    audio = f.read()\n\nr = requests.post(\n    \"https://api.smallest.ai/waves/v1/stt/\",\n    params={\"model\": \"pulse-pro\", \"language\": \"en\", \"word_timestamps\": \"true\"},\n    headers={\"Authorization\": f\"Bearer {API_KEY}\", \"Content-Type\": \"application/octet-stream\"},\n    data=audio,\n)\nr.raise_for_status()\nprint(r.json()[\"transcription\"])\n```\n\n**JavaScript / TypeScript**\n```typescript\nimport { readFileSync } from \"node:fs\";\n\nconst audio = readFileSync(\"./call.wav\");\nconst params = new URLSearchParams({ model: \"pulse-pro\", language: \"en\", word_timestamps: \"true\" });\n\nconst res = await fetch(`https://api.smallest.ai/waves/v1/stt/?${params}`, {\n  method: \"POST\",\n  headers: { Authorization: `Bearer ${process.env.SMALLEST_API_KEY}`, \"Content-Type\": \"application/octet-stream\" },\n  body: audio,\n});\nconsole.log((await res.json()).transcription);\n```\n\n## Common gotchas\n\n- **`model` is required.** Missing or invalid values return `400` with an enum-validation error.\n- **Pulse Pro is English only.** Pass `language=en`. Any other value returns `400 invalid_enum_value` (`Expected 'en', received '<x>'`).\n- **Pulse Pro does not support audio-by-URL.** Send raw bytes or use `?model=pulse` for the URL flow.\n",
+        "description": "Transcribe an audio file. The model is chosen via `?model=`:\n\n- `?model=pulse-pro`: English-only, leaderboard-ranked accuracy. Accepts raw bytes or a JSON audio URL; pass `webhook_url` to receive transcription asynchronously on long files.\n- `?model=pulse`: multilingual transcription (21 streaming + 12 pre-recorded languages), supports both raw bytes and audio-by-URL.\n\n## When to use this\n\nUse this endpoint when you have a complete audio file (call recording, voicemail, podcast episode) and want the transcript back in one response. For live transcription as audio arrives, use the realtime WebSocket endpoint (`WS /waves/v1/stt/live?model=pulse`).\n\nPulse Pro is HTTP-only.\n\n## Input methods\n\n- **Raw bytes**: `Content-Type: application/octet-stream` with the audio in the body. All knobs are query parameters.\n- **URL (both models)**: `Content-Type: application/json` with `{\"url\": \"...\"}` in the body.\n\n## Examples\n\n**cURL**: Pulse Pro, sync\n```bash\ncurl -X POST \"https://api.smallest.ai/waves/v1/stt/?model=pulse-pro&language=en&word_timestamps=true\" \\\n  -H \"Authorization: Bearer $SMALLEST_API_KEY\" \\\n  -H \"Content-Type: application/octet-stream\" \\\n  --data-binary \"@./call.wav\"\n```\n\n**cURL**: Pulse Pro, async via webhook\n```bash\ncurl -X POST \"https://api.smallest.ai/waves/v1/stt/?model=pulse-pro&language=en&webhook_url=https://your.app/cb\" \\\n  -H \"Authorization: Bearer $SMALLEST_API_KEY\" \\\n  -H \"Content-Type: application/octet-stream\" \\\n  --data-binary \"@./call.wav\"\n```\nReturns `200 { \"status\": \"processing\", \"request_id\": \"...\" }` immediately. The webhook receives the full transcription when ready.\n\n**cURL**: Pulse, audio-by-URL\n```bash\ncurl -X POST \"https://api.smallest.ai/waves/v1/stt/?model=pulse&language=en\" \\\n  -H \"Authorization: Bearer $SMALLEST_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"url\": \"https://your-bucket.s3.amazonaws.com/call.wav\"}'\n```\n\n**Python**\n```python\nimport requests\n\nwith open(\"./call.wav\", \"rb\") as f:\n    audio = f.read()\n\nr = requests.post(\n    \"https://api.smallest.ai/waves/v1/stt/\",\n    params={\"model\": \"pulse-pro\", \"language\": \"en\", \"word_timestamps\": \"true\"},\n    headers={\"Authorization\": f\"Bearer {API_KEY}\", \"Content-Type\": \"application/octet-stream\"},\n    data=audio,\n)\nr.raise_for_status()\nprint(r.json()[\"transcription\"])\n```\n\n**JavaScript / TypeScript**\n```typescript\nimport { readFileSync } from \"node:fs\";\n\nconst audio = readFileSync(\"./call.wav\");\nconst params = new URLSearchParams({ model: \"pulse-pro\", language: \"en\", word_timestamps: \"true\" });\n\nconst res = await fetch(`https://api.smallest.ai/waves/v1/stt/?${params}`, {\n  method: \"POST\",\n  headers: { Authorization: `Bearer ${process.env.SMALLEST_API_KEY}`, \"Content-Type\": \"application/octet-stream\" },\n  body: audio,\n});\nconsole.log((await res.json()).transcription);\n```\n\n## Common gotchas\n\n- **`model` is required.** Missing or invalid values return `400` with an enum-validation error.\n- **Pulse Pro is English only.** Pass `language=en`. Any other value returns `400 invalid_enum_value` (`Expected 'en', received '<x>'`).\n- **Both models accept audio-by-URL.** Send `Content-Type: application/json` with a `url` property. This was verified for Pulse and Pulse Pro on 2026-10-25.\n",
         "tags": [
           "speechToText"
         ],
@@ -722,7 +722,7 @@
           {
             "name": "model",
             "in": "query",
-            "description": "Selects which ASR model handles the request. Required; missing or invalid values return `400`.\n\n- `pulse-pro`: English only, leaderboard-ranked accuracy, raw bytes only; supports async via `webhook_url`.\n- `pulse`: multilingual (21 streaming + 12 pre-recorded languages), raw bytes OR URL.\n",
+            "description": "Selects which ASR model handles the request. Required; missing or invalid values return `400`.\n\n- `pulse-pro`: English only, leaderboard-ranked accuracy, raw bytes or JSON audio URL; supports async via `webhook_url`.\n- `pulse`: multilingual (21 streaming + 12 pre-recorded languages), raw bytes OR URL.\n",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/WavesV1SttPostParametersModel"
@@ -731,7 +731,7 @@
           {
             "name": "language",
             "in": "query",
-            "description": "Language of the audio file. This endpoint is **Pre-Recorded (HTTP)**. For streaming, use `WSS /waves/v1/stt/live` (different supported-language set).\n\nAlways pass `language`. To auto-detect, pass one of the regional aggregators in the enum. On Pulse Pro, only `en` is accepted; any other value returns HTTP 400.\n\n**Single-language codes:** `en`, `hi`, `de`, `es`, `ru`, `it`, `fr`, `nl`, `pt`, `zh`, `ja`, `ko`.\n\n**Regional auto-detect aggregators** for unknown audio:\n- `multi-eu` auto-detects across the European codes plus `en`.\n- `multi-asian` auto-detects across `zh`, `ko`, `ja`, `en`.\n- `multi-indic` auto-detects across `en`, `hi`, `gu`, `mr`, `bn`, `or`. India region only.\n\n**Region gating.** Indic single-language codes and `multi-indic` are enabled in the India region only. East Asian codes and `multi-asian` are enabled in the US region only. Set `language` explicitly when you know the audio language; omission may return `LANGUAGE_NOT_ENABLED_IN_REGION` if the auto-detect aggregator is not enabled for your region.\n\n- **Pulse Pro**: pass `en`. Any other value returns HTTP 400 at validation.\n- **Pulse**: pass any code above. See the [Pulse model card](/model-cards/speech-to-text/pulse) for the full table with language names.\n",
+            "description": "Language of pre-recorded HTTP audio. Pass an explicit language for predictable behavior. Pulse Pro accepts only en and defaulted to en when omitted in captures on 2026-10-25. Pulse omission attempted multi and returned LANGUAGE_NOT_ENABLED_IN_REGION in ap-south-1.\n\nSingle-language codes: en, hi, de, es, ru, it, fr, nl, pt, zh, ja, ko. Auto-detect aggregators: multi-eu (European languages and en), multi-asian (zh, ko, ja, en), multi-indic (en, hi, gu, mr, bn, or). The latter four Indic codes have not been verified as standalone pre-recorded language values and are not exposed by this enum.\n\nAvailability may depend on model, account, and serving region. Do not assume strict US-only or India-only gating from the hostname: zh and multi-indic both succeeded through api.smallest.ai serving from ap-south-1 on 2026-10-25. For regional access use api.us.smallest.ai or api.india.smallest.ai; handle LANGUAGE_NOT_ENABLED_IN_REGION errors. Streaming uses a different language set.",
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/WavesV1SttPostParametersLanguage"
@@ -740,7 +740,7 @@
           {
             "name": "word_timestamps",
             "in": "query",
-            "description": "Include the per-word `words[]` array in the response. Each entry carries the recognized `word`, its `start`/`end` timestamps, and a per-word `confidence` score (0.0 to 1.0). With `diarize=true`, entries also include `speaker`.\n\nMust be the lowercase string `\"true\"` or `\"false\"`. Any other value (including integer or capitalized variants) returns HTTP 400.\n",
+            "description": "Include the per-word `words[]` array in the response. Each entry carries the recognized `word`, its `start`/`end` timestamps, and a per-word `confidence` score (0.0 to 1.0). With `diarize=true`, entries also include `speaker`.\n\nMust be the lowercase string `\"true\"` or `\"false\"`. Any other value (including integer or capitalized variants) returns HTTP 400.\n\nPulse also returns words and utterances with diarize=true even when word_timestamps is omitted. Pulse Pro ignores diarize.",
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/WavesV1SttPostParametersWordTimestamps",
@@ -750,7 +750,7 @@
           {
             "name": "diarize",
             "in": "query",
-            "description": "Multi-speaker identification. Adds per-word and per-utterance speaker labels.\n\nMust be the lowercase string `\"true\"` or `\"false\"`. Any other value (including integer or capitalized variants) returns HTTP 400.\n",
+            "description": "Pulse only: identify speakers and return per-word labels, utterances, and diarization_segments. Pulse Pro accepted this parameter but ignored it in captures on 2026-10-25. Must be the lowercase string \"true\" or \"false\"; other values return HTTP 400.",
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/WavesV1SttPostParametersDiarize",
@@ -760,7 +760,7 @@
           {
             "name": "keywords",
             "in": "query",
-            "description": "Pulse only. Boost recognition of specific words or phrases for this request. The same parameter works on the realtime WebSocket endpoint.\n\n**Entry format:** `KEYWORD` or `KEYWORD:INTENSIFIER`, where `INTENSIFIER` is a number that defaults to `1`. Example: `Blackwell:2,Jensen Huang:2`. Matching is case-sensitive. Duplicates: last-wins (`NVIDIA:1,NVIDIA:5` is equivalent to `NVIDIA:5`). Max 100 keywords per request; sending more returns `400` with `keywords too large (max 100)` in `errors[]`.\n\n**Encodings.** Comma-string (recommended), repeated key (`keywords=a&keywords=b`), and bracketed array (`keywords[]=a`) are all accepted. A JSON-array literal (`[\"a\",\"b\"]`) does not boost. Pass the raw string.\n\n**Intensifier.** Default `1`, recommended `1` to `3`. Above `10` is not recommended: higher values increase the chance of hallucinating the keyword when it was not spoken. Reuse the same keyword list across requests when the vocabulary is stable.\n\nSee [Keyword Boosting](/models/speech-to-text/features/keyword-boosting) for the full contract and worked examples.\n",
+            "description": "Pulse only. Boost recognition of specific words or phrases for this request. The same parameter works on the realtime WebSocket endpoint.\n\n**Entry format:** `KEYWORD` or `KEYWORD:INTENSIFIER`, where `INTENSIFIER` is a number that defaults to `1`. Example: `Blackwell:2,Jensen Huang:2`. Matching is case-sensitive. Duplicates: last-wins (`NVIDIA:1,NVIDIA:5` is equivalent to `NVIDIA:5`). Max 100 keywords per request; sending more returns `400` with `keywords too large (max 100)` in `errors[]`.\n\n**Encodings.** Comma-string (recommended), repeated key (`keywords=a&keywords=b`), and bracketed array (`keywords[]=a`) are all accepted. A JSON-array literal (`[\"a\",\"b\"]`) does not boost. Pass the raw string.\n\n**Intensifier.** Default `1`, recommended `1` to `3`. Above `10` is not recommended: higher values increase the chance of hallucinating the keyword when it was not spoken. Reuse the same keyword list across requests when the vocabulary is stable.\n\nSee [Keyword Boosting](/models/speech-to-text/features/keyword-boosting) for the full contract and worked examples.\n\nPulse Pro accepted but ignored this parameter in captures on 2026-10-25.",
             "required": false,
             "schema": {
               "type": "string"
@@ -924,8 +924,14 @@
                 "type": "string",
                 "format": "binary"
               }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SttUrlRequest"
+              }
             }
-          }
+          },
+          "required": true
         },
         "security": [
           {
@@ -1058,6 +1064,14 @@
     {
       "url": "https://api.smallest.ai",
       "description": "waves"
+    },
+    {
+      "url": "https://api.us.smallest.ai",
+      "description": "US region (Oregon). Mint and use access tokens through this same region-pinned host."
+    },
+    {
+      "url": "https://api.india.smallest.ai",
+      "description": "India region (Mumbai). Mint and use access tokens through this same region-pinned host."
     }
   ],
   "components": {
@@ -2148,14 +2162,14 @@
             "items": {
               "$ref": "#/components/schemas/Word"
             },
-            "description": "Per-word timestamps. **Empty unless the request sets `word_timestamps=true`.** Each entry carries `word`, `start`, `end`, and `confidence` (0.0–1.0). Pulse responses with `diarize=true` also include `speaker` and `speaker_confidence`."
+            "description": "Per-word timestamps, returned when word_timestamps=true. Pulse also returns words when diarize=true without word_timestamps. Entries carry word, start, end, and confidence; diarized Pulse responses include speaker and speaker_confidence."
           },
           "utterances": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Utterance"
             },
-            "description": "Sentence-level segments. Returned by `?model=pulse` only; Pulse Pro responses omit this field entirely. **Empty on Pulse unless the request sets `word_timestamps=true`** (the same flag turns on both `words[]` and `utterances[]`)."
+            "description": "Sentence-level segments returned by Pulse when word_timestamps=true or diarize=true. Pulse Pro omits this field."
           },
           "language": {
             "type": "string",
@@ -2185,6 +2199,13 @@
               "format": "double"
             },
             "description": "Detected emotion labels mapped to confidence scores. Present when `emotion_detection=true` was set on the request. Current known keys: `anger`, `disgust`, `fear`, `sadness`, `happiness`."
+          },
+          "diarization_segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiarizationSegment"
+            },
+            "description": "Speaker turns returned by Pulse with diarize=true. Omitted when diarization is not requested or not supported."
           }
         },
         "required": [
@@ -2711,14 +2732,51 @@
           }
         },
         "title": "Error"
+      },
+      "SttUrlRequest": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Publicly accessible audio URL for Pulse or Pulse Pro."
+          }
+        },
+        "description": "Audio-by-URL request. Send as application/json instead of application/octet-stream."
+      },
+      "DiarizationSegment": {
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "speaker"
+        ],
+        "properties": {
+          "start": {
+            "type": "number",
+            "format": "double",
+            "description": "Start time in seconds."
+          },
+          "end": {
+            "type": "number",
+            "format": "double",
+            "description": "End time in seconds."
+          },
+          "speaker": {
+            "type": "integer",
+            "description": "Speaker identifier."
+          }
+        }
       }
     },
     "securitySchemes": {
       "BearerAuth": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "Authorization",
-        "description": "API key authentication. Include your key as `Authorization: Bearer YOUR_API_KEY`. Access tokens are not accepted on this endpoint."
+        "type": "http",
+        "description": "Send an API key or supported short-lived access token as Authorization: Bearer <credential>. Tokens are accepted on STT and other inference routes listed by auth_create_access_token, but cannot mint tokens or access administrative routes. Tokens are valid only in the region where they were minted; use the same region-pinned host for minting and inference.",
+        "scheme": "bearer"
       }
     }
   }

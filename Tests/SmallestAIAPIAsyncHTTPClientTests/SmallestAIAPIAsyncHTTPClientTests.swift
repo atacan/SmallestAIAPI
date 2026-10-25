@@ -32,7 +32,7 @@ struct AsyncHTTPClientFactoryTests {
     @Test func factoryInstallsAuthenticationAndPropagatesProviderFailures() async throws {
         let client = Client.asyncHTTPClient(
             serverURL: URL(string: "https://example.invalid")!,
-            authentication: .apiKey { throw OfflineCredentialError.expected }
+            authentication: .bearer { throw OfflineCredentialError.expected }
         )
         do {
             _ = try await client.auth_create_access_token(.init())

@@ -1,0 +1,1 @@
+{"status":"error","message":"Invalid query parameters","errors":[{"received":"de","code":"invalid_enum_value","options":["en"],"path":["language"],"message":"Invalid enum value. Expected 'en', received 'de'"}]}
